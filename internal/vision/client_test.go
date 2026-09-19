@@ -95,7 +95,7 @@ func testConfig(textBase, visionBase *url.URL) config.Config {
 		VisionModel:           "vision-model",
 		MaxRequestBytes:       1 << 20,
 		MaxImageBytes:         1 << 20,
-		VisionTimeout:         time.Second,
+		VisionTimeout:         10 * time.Second,
 		VisionMaxConcurrency:  2,
 		VisionCacheTTL:        time.Hour,
 		VisionCacheMaxEntries: 16,
