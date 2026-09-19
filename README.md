@@ -1,6 +1,6 @@
-# Prism Vision Gateway
+# Lens
 
-Prism 是一个面向 OpenAI-compatible 客户端的本地视觉预处理网关。它让只能处理文本、遇到图片会直接返回 HTTP 400 的模型，也能安全地参与包含图片的会话。
+Lens 是一个面向 OpenAI-compatible 客户端的本地视觉预处理网关。它将视觉输入转换为结构化证据，让只能处理文本、遇到图片会直接返回 HTTP 400 的模型，也能安全地参与包含图片的会话。
 
 收到图片后，网关会先调用另一个支持视觉的 `/chat/completions` 站点，将图片转换成精简的结构化证据，再用纯文本证据替换原图片，最后把请求转发给文本模型。MCP、Skill、函数工具定义以及流式响应保持不变。
 
@@ -25,7 +25,7 @@ Prism 是一个面向 OpenAI-compatible 客户端的本地视觉预处理网关�
 现有的三个变量仍可直接使用：
 
 ```dotenv
-BASE_URL=https://ai.prism.uno/v1
+BASE_URL=https://text.example.com/v1
 API_KEY=your-text-api-key
 MODEL=gpt-5.6-terra
 ```
@@ -52,8 +52,8 @@ POST {VISION_BASE_URL}/chat/completions
 
 ```bash
 go test ./...
-go build -o prism .
-./prism
+go build -o lens ./cmd/lens
+./lens
 ```
 
 默认监听：
@@ -75,6 +75,17 @@ http://127.0.0.1:8787/v1
 ```
 
 客户端 API key 可以使用任意非空占位值。发往文本和视觉站点的真实 key 均由网关配置注入，不会使用客户端提交的 `Authorization`。
+
+## 项目结构
+
+```text
+cmd/lens/          进程入口与依赖组装
+internal/config/   环境变量和 .env 配置
+internal/gateway/  OpenAI 协议转换、代理和错误响应
+internal/vision/   视觉上游、结构化证据和缓存
+```
+
+依赖从 `cmd/lens` 指向各内部包；视觉层不依赖网关层，上游站点名称不会进入项目代码或模块名称。
 
 ## 视觉证据格式
 

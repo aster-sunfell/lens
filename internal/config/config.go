@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"bufio"
@@ -27,7 +27,7 @@ type Config struct {
 	VisionCacheMaxEntries int
 }
 
-func LoadConfig() (Config, error) {
+func Load() (Config, error) {
 	if err := loadDotEnv(".env"); err != nil {
 		return Config{}, err
 	}
@@ -42,7 +42,7 @@ func LoadConfig() (Config, error) {
 	}
 
 	cfg := Config{
-		ListenAddr:            envOr("GATEWAY_LISTEN", "127.0.0.1:8787"),
+		ListenAddr:            firstEnvOr("127.0.0.1:8787", "LENS_LISTEN", "GATEWAY_LISTEN"),
 		TextBaseURL:           textURL,
 		TextAPIKey:            firstEnv("TEXT_API_KEY", "API_KEY"),
 		TextModel:             firstEnv("TEXT_MODEL", "MODEL"),
@@ -142,8 +142,8 @@ func firstEnv(names ...string) string {
 	return ""
 }
 
-func envOr(name, fallback string) string {
-	if value := strings.TrimSpace(os.Getenv(name)); value != "" {
+func firstEnvOr(fallback string, names ...string) string {
+	if value := firstEnv(names...); value != "" {
 		return value
 	}
 	return fallback

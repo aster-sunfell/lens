@@ -1,4 +1,4 @@
-package main
+package vision
 
 import (
 	"bytes"
@@ -13,6 +13,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"lens/internal/config"
 )
 
 const visionPromptVersion = "minimal-evidence-v1"
@@ -23,11 +25,13 @@ Return only one JSON object with exactly these fields:
 {"description":"complete description of the image and important visual relationships","visible_text":"all readable text in reading order, or an empty string","relevant_details":["facts relevant to the supplied focus"],"uncertainties":["anything blurred, hidden, ambiguous, or uncertain"]}
 description must be non-empty. Both arrays must always be present. Do not wrap the JSON in prose.`
 
-type VisionResolver interface {
-	Analyze(ctx context.Context, imageURL, focus string) (Evidence, error)
+type InputError struct {
+	Message string
 }
 
-type VisionClient struct {
+func (e *InputError) Error() string { return e.Message }
+
+type Client struct {
 	baseURL       *url.URL
 	apiKey        string
 	model         string
@@ -37,8 +41,8 @@ type VisionClient struct {
 	sem           chan struct{}
 }
 
-func NewVisionClient(cfg Config, httpClient *http.Client) *VisionClient {
-	return &VisionClient{
+func NewClient(cfg config.Config, httpClient *http.Client) *Client {
+	return &Client{
 		baseURL:       cfg.VisionBaseURL,
 		apiKey:        cfg.VisionAPIKey,
 		model:         cfg.VisionModel,
@@ -49,10 +53,10 @@ func NewVisionClient(cfg Config, httpClient *http.Client) *VisionClient {
 	}
 }
 
-func (v *VisionClient) Analyze(ctx context.Context, imageURL, focus string) (Evidence, error) {
+func (v *Client) Analyze(ctx context.Context, imageURL, focus string) (Evidence, error) {
 	key, err := v.cacheKey(imageURL, focus)
 	if err != nil {
-		return Evidence{}, &ImageInputError{Message: err.Error()}
+		return Evidence{}, &InputError{Message: err.Error()}
 	}
 	evidence, _, err := v.cache.GetOrCompute(ctx, key, func(ctx context.Context) (Evidence, error) {
 		select {
@@ -66,7 +70,7 @@ func (v *VisionClient) Analyze(ctx context.Context, imageURL, focus string) (Evi
 	return evidence, err
 }
 
-func (v *VisionClient) cacheKey(imageURL, focus string) (string, error) {
+func (v *Client) cacheKey(imageURL, focus string) (string, error) {
 	imageIdentity, err := imageIdentity(imageURL, v.maxImageBytes)
 	if err != nil {
 		return "", err
@@ -106,7 +110,7 @@ func imageIdentity(imageURL string, maxBytes int64) (string, error) {
 	return "url:" + u.String(), nil
 }
 
-func (v *VisionClient) requestEvidence(ctx context.Context, imageURL, focus string) (Evidence, error) {
+func (v *Client) requestEvidence(ctx context.Context, imageURL, focus string) (Evidence, error) {
 	var lastErr error
 	for attempt := 1; attempt <= 2; attempt++ {
 		raw, err := v.doVisionRequest(ctx, imageURL, focus, attempt > 1)
@@ -122,7 +126,7 @@ func (v *VisionClient) requestEvidence(ctx context.Context, imageURL, focus stri
 	return Evidence{}, fmt.Errorf("vision response failed schema validation after one retry: %w", lastErr)
 }
 
-func (v *VisionClient) doVisionRequest(ctx context.Context, imageURL, focus string, retry bool) (string, error) {
+func (v *Client) doVisionRequest(ctx context.Context, imageURL, focus string, retry bool) (string, error) {
 	focus = strings.TrimSpace(focus)
 	if focus == "" {
 		focus = "Describe the image completely enough for a text-only model to reason about it."

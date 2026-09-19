@@ -9,11 +9,15 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"lens/internal/config"
+	"lens/internal/gateway"
+	"lens/internal/vision"
 )
 
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
-	cfg, err := LoadConfig()
+	cfg, err := config.Load()
 	if err != nil {
 		logger.Error("configuration error", "error", err)
 		os.Exit(1)
@@ -32,12 +36,12 @@ func main() {
 	}
 	visionHTTPClient := &http.Client{Transport: transport.Clone(), Timeout: cfg.VisionTimeout}
 	textHTTPClient := &http.Client{Transport: transport.Clone()}
-	vision := NewVisionClient(cfg, visionHTTPClient)
-	gateway := NewGateway(cfg, vision, textHTTPClient, logger)
+	visionClient := vision.NewClient(cfg, visionHTTPClient)
+	handler := gateway.New(cfg, visionClient, textHTTPClient, logger)
 
 	server := &http.Server{
 		Addr:              cfg.ListenAddr,
-		Handler:           gateway,
+		Handler:           handler,
 		ReadHeaderTimeout: 10 * time.Second,
 		IdleTimeout:       120 * time.Second,
 		MaxHeaderBytes:    1 << 20,
@@ -54,7 +58,7 @@ func main() {
 		}
 	}()
 
-	logger.Info("gateway listening",
+	logger.Info("lens listening",
 		"address", cfg.ListenAddr,
 		"text_host", cfg.TextBaseURL.Host,
 		"vision_host", cfg.VisionBaseURL.Host,

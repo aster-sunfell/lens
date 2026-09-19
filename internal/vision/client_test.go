@@ -1,4 +1,4 @@
-package main
+package vision
 
 import (
 	"context"
@@ -11,6 +11,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"lens/internal/config"
 )
 
 func TestVisionClientCallsCompatibleEndpointAndCaches(t *testing.T) {
@@ -39,7 +41,7 @@ func TestVisionClientCallsCompatibleEndpointAndCaches(t *testing.T) {
 
 	base, _ := url.Parse(server.URL + "/v1")
 	cfg := testConfig(base, base)
-	client := NewVisionClient(cfg, server.Client())
+	client := NewClient(cfg, server.Client())
 	for range 2 {
 		evidence, err := client.Analyze(context.Background(), "data:image/png;base64,aW1n", "What failed?")
 		if err != nil {
@@ -69,7 +71,7 @@ func TestVisionClientRetriesInvalidEvidenceOnce(t *testing.T) {
 	defer server.Close()
 
 	base, _ := url.Parse(server.URL)
-	client := NewVisionClient(testConfig(base, base), server.Client())
+	client := NewClient(testConfig(base, base), server.Client())
 	if _, err := client.Analyze(context.Background(), "data:image/png;base64,aW1n", "focus"); err != nil {
 		t.Fatal(err)
 	}
@@ -82,8 +84,8 @@ func validEvidenceJSON() string {
 	return `{"description":"A login error dialog","visible_text":"invalid redirect_uri","relevant_details":["callback uses localhost"],"uncertainties":[]}`
 }
 
-func testConfig(textBase, visionBase *url.URL) Config {
-	return Config{
+func testConfig(textBase, visionBase *url.URL) config.Config {
+	return config.Config{
 		ListenAddr:            "127.0.0.1:0",
 		TextBaseURL:           textBase,
 		TextAPIKey:            "text-secret",

@@ -1,3 +1,3 @@
-module prism
+module lens
 
 go 1.22

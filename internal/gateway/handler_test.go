@@ -1,4 +1,4 @@
-package main
+package gateway
 
 import (
 	"bytes"
@@ -11,6 +11,10 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
+
+	"lens/internal/config"
+	"lens/internal/vision"
 )
 
 func TestGatewayTransformsResponsesRequestAndStreamsTextResponse(t *testing.T) {
@@ -43,9 +47,9 @@ func TestGatewayTransformsResponsesRequestAndStreamsTextResponse(t *testing.T) {
 	textBase, _ := url.Parse(textServer.URL + "/v1")
 	visionBase, _ := url.Parse(visionServer.URL + "/v1")
 	cfg := testConfig(textBase, visionBase)
-	vision := NewVisionClient(cfg, visionServer.Client())
+	visionClient := vision.NewClient(cfg, visionServer.Client())
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	gatewayServer := httptest.NewServer(NewGateway(cfg, vision, textServer.Client(), logger))
+	gatewayServer := httptest.NewServer(New(cfg, visionClient, textServer.Client(), logger))
 	defer gatewayServer.Close()
 
 	payload := `{
@@ -107,7 +111,7 @@ func TestGatewayRejectsUnsupportedFileIDBeforeTextUpstream(t *testing.T) {
 	base, _ := url.Parse(textServer.URL)
 	cfg := testConfig(base, base)
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	gateway := httptest.NewServer(NewGateway(cfg, &recordingResolver{}, textServer.Client(), logger))
+	gateway := httptest.NewServer(New(cfg, &recordingResolver{}, textServer.Client(), logger))
 	defer gateway.Close()
 
 	body := `{"input":[{"role":"user","content":[{"type":"input_image","file_id":"file-1"}]}]}`
@@ -122,5 +126,27 @@ func TestGatewayRejectsUnsupportedFileIDBeforeTextUpstream(t *testing.T) {
 	}
 	if textCalls != 0 {
 		t.Fatalf("text upstream calls = %d", textCalls)
+	}
+}
+
+func validEvidenceJSON() string {
+	return `{"description":"A login error dialog","visible_text":"invalid redirect_uri","relevant_details":["callback uses localhost"],"uncertainties":[]}`
+}
+
+func testConfig(textBase, visionBase *url.URL) config.Config {
+	return config.Config{
+		ListenAddr:            "127.0.0.1:0",
+		TextBaseURL:           textBase,
+		TextAPIKey:            "text-secret",
+		TextModel:             "text-model",
+		VisionBaseURL:         visionBase,
+		VisionAPIKey:          "vision-secret",
+		VisionModel:           "vision-model",
+		MaxRequestBytes:       1 << 20,
+		MaxImageBytes:         1 << 20,
+		VisionTimeout:         time.Second,
+		VisionMaxConcurrency:  2,
+		VisionCacheTTL:        time.Hour,
+		VisionCacheMaxEntries: 16,
 	}
 }
