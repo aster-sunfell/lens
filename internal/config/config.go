@@ -14,8 +14,6 @@ import (
 type Config struct {
 	ListenAddr            string
 	TextBaseURL           *url.URL
-	TextAPIKey            string
-	TextModel             string
 	VisionBaseURL         *url.URL
 	VisionAPIKey          string
 	VisionModel           string
@@ -34,7 +32,7 @@ func Load(dotEnvPath string) (Config, error) {
 		}
 	}
 
-	textURL, err := requiredURL("TEXT_BASE_URL", firstEnv("TEXT_BASE_URL", "BASE_URL"))
+	textURL, err := requiredURL("TEXT_BASE_URL", os.Getenv("TEXT_BASE_URL"))
 	if err != nil {
 		return Config{}, err
 	}
@@ -44,10 +42,8 @@ func Load(dotEnvPath string) (Config, error) {
 	}
 
 	cfg := Config{
-		ListenAddr:            firstEnvOr("127.0.0.1:8787", "LENS_LISTEN", "GATEWAY_LISTEN"),
+		ListenAddr:            envOr("LENS_LISTEN", "127.0.0.1:8787"),
 		TextBaseURL:           textURL,
-		TextAPIKey:            firstEnv("TEXT_API_KEY", "API_KEY"),
-		TextModel:             firstEnv("TEXT_MODEL", "MODEL"),
 		VisionBaseURL:         visionURL,
 		VisionAPIKey:          os.Getenv("VISION_API_KEY"),
 		VisionModel:           os.Getenv("VISION_MODEL"),
@@ -64,8 +60,6 @@ func Load(dotEnvPath string) (Config, error) {
 		name  string
 		value string
 	}{
-		{"TEXT_API_KEY/API_KEY", cfg.TextAPIKey},
-		{"TEXT_MODEL/MODEL", cfg.TextModel},
 		{"VISION_API_KEY", cfg.VisionAPIKey},
 		{"VISION_MODEL", cfg.VisionModel},
 	} {
@@ -135,17 +129,8 @@ func loadDotEnv(path string) error {
 	return nil
 }
 
-func firstEnv(names ...string) string {
-	for _, name := range names {
-		if value := strings.TrimSpace(os.Getenv(name)); value != "" {
-			return value
-		}
-	}
-	return ""
-}
-
-func firstEnvOr(fallback string, names ...string) string {
-	if value := firstEnv(names...); value != "" {
+func envOr(name, fallback string) string {
+	if value := strings.TrimSpace(os.Getenv(name)); value != "" {
 		return value
 	}
 	return fallback

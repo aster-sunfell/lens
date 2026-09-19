@@ -83,7 +83,6 @@ func (g *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			return
 		}
-		root["model"] = g.cfg.TextModel
 		transformed, err := json.Marshal(root)
 		if err != nil {
 			writeAPIError(w, http.StatusInternalServerError, "gateway_error", "could not encode transformed request")

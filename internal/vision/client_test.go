@@ -26,9 +26,6 @@ func TestVisionClientCallsCompatibleEndpointAndCaches(t *testing.T) {
 			t.Errorf("authorization was not replaced")
 		}
 		body, _ := io.ReadAll(r.Body)
-		if strings.Contains(string(body), "text-secret") {
-			t.Error("text upstream secret leaked to vision upstream")
-		}
 		if !strings.Contains(string(body), "data:image/png;base64,aW1n") {
 			t.Error("image missing from vision request")
 		}
@@ -88,8 +85,6 @@ func testConfig(textBase, visionBase *url.URL) config.Config {
 	return config.Config{
 		ListenAddr:            "127.0.0.1:0",
 		TextBaseURL:           textBase,
-		TextAPIKey:            "text-secret",
-		TextModel:             "text-model",
 		VisionBaseURL:         visionBase,
 		VisionAPIKey:          "vision-secret",
 		VisionModel:           "vision-model",

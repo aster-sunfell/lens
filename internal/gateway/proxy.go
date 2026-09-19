@@ -17,7 +17,6 @@ func (g *Handler) proxy(w http.ResponseWriter, source *http.Request, body io.Rea
 	copyHeaders(request.Header, source.Header)
 	removeHopByHopHeaders(request.Header)
 	request.Header.Del("Content-Length")
-	request.Header.Set("Authorization", "Bearer "+g.cfg.TextAPIKey)
 	request.Host = target.Host
 	request.ContentLength = contentLength
 

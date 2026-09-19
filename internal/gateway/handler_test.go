@@ -79,7 +79,7 @@ func TestGatewayTransformsResponsesRequestAndStreamsTextResponse(t *testing.T) {
 	if upstreamPath != "/v1/responses" {
 		t.Fatalf("upstream path = %q", upstreamPath)
 	}
-	if upstreamAuth != "Bearer text-secret" {
+	if upstreamAuth != "Bearer local-placeholder" {
 		t.Fatalf("upstream auth = %q", upstreamAuth)
 	}
 	if bytes.Contains(upstreamBody, []byte("data:image")) {
@@ -89,7 +89,7 @@ func TestGatewayTransformsResponsesRequestAndStreamsTextResponse(t *testing.T) {
 	if err := json.Unmarshal(upstreamBody, &transformed); err != nil {
 		t.Fatal(err)
 	}
-	if transformed["model"] != "text-model" {
+	if transformed["model"] != "client-model" {
 		t.Fatalf("model = %v", transformed["model"])
 	}
 	input := transformed["input"].([]any)
@@ -129,6 +129,45 @@ func TestGatewayRejectsUnsupportedFileIDBeforeTextUpstream(t *testing.T) {
 	}
 }
 
+func TestGatewayPassesThroughClientAuthentication(t *testing.T) {
+	type authentication struct {
+		authorization string
+		apiKey        string
+	}
+	received := make(chan authentication, 1)
+	textServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		received <- authentication{
+			authorization: r.Header.Get("Authorization"),
+			apiKey:        r.Header.Get("api-key"),
+		}
+		_, _ = io.WriteString(w, `{"data":[]}`)
+	}))
+	defer textServer.Close()
+
+	base, _ := url.Parse(textServer.URL + "/v1")
+	cfg := testConfig(base, base)
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	gatewayServer := httptest.NewServer(New(cfg, &recordingResolver{}, textServer.Client(), logger))
+	defer gatewayServer.Close()
+
+	req, _ := http.NewRequest(http.MethodGet, gatewayServer.URL+"/v1/models", nil)
+	req.Header.Set("Authorization", "Bearer user-secret")
+	req.Header.Set("api-key", "provider-specific-secret")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	upstream := <-received
+	if upstream.authorization != "Bearer user-secret" {
+		t.Fatalf("upstream authorization = %q", upstream.authorization)
+	}
+	if upstream.apiKey != "provider-specific-secret" {
+		t.Fatalf("upstream api-key = %q", upstream.apiKey)
+	}
+}
+
 func validEvidenceJSON() string {
 	return `{"description":"A login error dialog","visible_text":"invalid redirect_uri","relevant_details":["callback uses localhost"],"uncertainties":[]}`
 }
@@ -137,8 +176,6 @@ func testConfig(textBase, visionBase *url.URL) config.Config {
 	return config.Config{
 		ListenAddr:            "127.0.0.1:0",
 		TextBaseURL:           textBase,
-		TextAPIKey:            "text-secret",
-		TextModel:             "text-model",
 		VisionBaseURL:         visionBase,
 		VisionAPIKey:          "vision-secret",
 		VisionModel:           "vision-model",
