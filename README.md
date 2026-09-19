@@ -20,7 +20,11 @@ Lens 是一个面向 OpenAI-compatible 客户端的本地视觉预处理网关�
 
 ## 配置
 
-程序启动时自动读取当前目录的 `.env`，已经存在的进程环境变量优先。
+程序默认读取当前目录的 `.env`，已经存在的进程环境变量优先。也可以明确指定配置文件：
+
+```bash
+lens --config /path/to/lens.env
+```
 
 现有的三个变量仍可直接使用：
 
@@ -46,7 +50,45 @@ VISION_MODEL=your-vision-model
 POST {VISION_BASE_URL}/chat/completions
 ```
 
-## 构建与启动
+## Windows 快速开始
+
+从 [GitHub Releases](https://github.com/aster-sunfell/lens/releases/latest) 下载：
+
+```text
+lens_0.1.0_windows_amd64.zip
+```
+
+Windows on ARM 设备请选择 `windows_arm64.zip`。解压后在 PowerShell 中运行：
+
+```powershell
+Copy-Item .env.example lens.env
+notepad lens.env
+.\lens.exe --config .\lens.env
+```
+
+在另一个 PowerShell 窗口检查服务：
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8787/healthz
+```
+
+应该得到：
+
+```text
+status
+------
+ok
+```
+
+可以通过以下命令查看版本：
+
+```powershell
+.\lens.exe --version
+```
+
+Release 同时提供 `checksums.txt`。可以使用 `Get-FileHash -Algorithm SHA256` 计算下载文件的校验值并进行比对。
+
+## 从源码构建
 
 需要 Go 1.22 或更高版本，不依赖第三方 Go 包。
 

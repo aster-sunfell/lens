@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"flag"
+	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -10,14 +12,33 @@ import (
 	"syscall"
 	"time"
 
-	"lens/internal/config"
-	"lens/internal/gateway"
-	"lens/internal/vision"
+	"github.com/aster-sunfell/lens/internal/config"
+	"github.com/aster-sunfell/lens/internal/gateway"
+	"github.com/aster-sunfell/lens/internal/vision"
+)
+
+var (
+	version = "dev"
+	commit  = "unknown"
+	date    = "unknown"
 )
 
 func main() {
+	configPath := flag.String("config", ".env", "path to the environment configuration file")
+	showVersion := flag.Bool("version", false, "print version information and exit")
+	flag.Usage = func() {
+		_, _ = fmt.Fprintln(flag.CommandLine.Output(), "Usage: lens [options]")
+		_, _ = fmt.Fprintln(flag.CommandLine.Output(), "\nOptions:")
+		flag.PrintDefaults()
+	}
+	flag.Parse()
+	if *showVersion {
+		fmt.Printf("lens %s\ncommit %s\nbuilt %s\n", version, commit, date)
+		return
+	}
+
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
-	cfg, err := config.Load()
+	cfg, err := config.Load(*configPath)
 	if err != nil {
 		logger.Error("configuration error", "error", err)
 		os.Exit(1)

@@ -14,7 +14,7 @@ import (
 	"net/url"
 	"strings"
 
-	"lens/internal/config"
+	"github.com/aster-sunfell/lens/internal/config"
 )
 
 const visionPromptVersion = "minimal-evidence-v1"

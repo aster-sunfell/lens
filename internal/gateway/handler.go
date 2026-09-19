@@ -13,8 +13,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"lens/internal/config"
-	"lens/internal/vision"
+	"github.com/aster-sunfell/lens/internal/config"
+	"github.com/aster-sunfell/lens/internal/vision"
 )
 
 type Handler struct {

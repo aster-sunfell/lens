@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"lens/internal/config"
-	"lens/internal/vision"
+	"github.com/aster-sunfell/lens/internal/config"
+	"github.com/aster-sunfell/lens/internal/vision"
 )
 
 func TestGatewayTransformsResponsesRequestAndStreamsTextResponse(t *testing.T) {

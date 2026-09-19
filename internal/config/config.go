@@ -27,9 +27,11 @@ type Config struct {
 	VisionCacheMaxEntries int
 }
 
-func Load() (Config, error) {
-	if err := loadDotEnv(".env"); err != nil {
-		return Config{}, err
+func Load(dotEnvPath string) (Config, error) {
+	if dotEnvPath != "" {
+		if err := loadDotEnv(dotEnvPath); err != nil {
+			return Config{}, err
+		}
 	}
 
 	textURL, err := requiredURL("TEXT_BASE_URL", firstEnv("TEXT_BASE_URL", "BASE_URL"))

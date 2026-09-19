@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"lens/internal/vision"
+	"github.com/aster-sunfell/lens/internal/vision"
 )
 
 type recordingResolver struct {

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"lens/internal/vision"
+	"github.com/aster-sunfell/lens/internal/vision"
 )
 
 type Analyzer interface {

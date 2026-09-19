@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"lens/internal/config"
+	"github.com/aster-sunfell/lens/internal/config"
 )
 
 func TestVisionClientCallsCompatibleEndpointAndCaches(t *testing.T) {
