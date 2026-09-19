@@ -11,18 +11,24 @@ import (
 	"time"
 )
 
+const (
+	TextHTTPModeHTTP2  = "http2"
+	TextHTTPModeHTTP11 = "http1.1"
+)
+
 type Config struct {
-	ListenAddr            string
-	TextBaseURL           *url.URL
-	VisionBaseURL         *url.URL
-	VisionAPIKey          string
-	VisionModel           string
-	MaxRequestBytes       int64
-	MaxImageBytes         int64
-	VisionTimeout         time.Duration
-	VisionMaxConcurrency  int
-	VisionCacheTTL        time.Duration
-	VisionCacheMaxEntries int
+	ListenAddr                string
+	TextBaseURL               *url.URL
+	TextHTTPCompatibilityMode string
+	VisionBaseURL             *url.URL
+	VisionAPIKey              string
+	VisionModel               string
+	MaxRequestBytes           int64
+	MaxImageBytes             int64
+	VisionTimeout             time.Duration
+	VisionMaxConcurrency      int
+	VisionCacheTTL            time.Duration
+	VisionCacheMaxEntries     int
 }
 
 func Load(dotEnvPath string) (Config, error) {
@@ -42,17 +48,18 @@ func Load(dotEnvPath string) (Config, error) {
 	}
 
 	cfg := Config{
-		ListenAddr:            envOr("LENS_LISTEN", "127.0.0.1:8787"),
-		TextBaseURL:           textURL,
-		VisionBaseURL:         visionURL,
-		VisionAPIKey:          os.Getenv("VISION_API_KEY"),
-		VisionModel:           os.Getenv("VISION_MODEL"),
-		MaxRequestBytes:       envInt64("MAX_REQUEST_BYTES", 64<<20),
-		MaxImageBytes:         envInt64("MAX_IMAGE_BYTES", 20<<20),
-		VisionTimeout:         time.Duration(envInt("VISION_TIMEOUT_SECONDS", 120)) * time.Second,
-		VisionMaxConcurrency:  envInt("VISION_MAX_CONCURRENCY", 3),
-		VisionCacheTTL:        time.Duration(envInt("VISION_CACHE_TTL_SECONDS", 3600)) * time.Second,
-		VisionCacheMaxEntries: envInt("VISION_CACHE_MAX_ENTRIES", 256),
+		ListenAddr:                envOr("LENS_LISTEN", "127.0.0.1:8787"),
+		TextBaseURL:               textURL,
+		TextHTTPCompatibilityMode: envOr("TEXT_HTTP_COMPATIBILITY_MODE", TextHTTPModeHTTP2),
+		VisionBaseURL:             visionURL,
+		VisionAPIKey:              os.Getenv("VISION_API_KEY"),
+		VisionModel:               os.Getenv("VISION_MODEL"),
+		MaxRequestBytes:           envInt64("MAX_REQUEST_BYTES", 64<<20),
+		MaxImageBytes:             envInt64("MAX_IMAGE_BYTES", 20<<20),
+		VisionTimeout:             time.Duration(envInt("VISION_TIMEOUT_SECONDS", 120)) * time.Second,
+		VisionMaxConcurrency:      envInt("VISION_MAX_CONCURRENCY", 3),
+		VisionCacheTTL:            time.Duration(envInt("VISION_CACHE_TTL_SECONDS", 3600)) * time.Second,
+		VisionCacheMaxEntries:     envInt("VISION_CACHE_MAX_ENTRIES", 256),
 	}
 
 	var missing []string
@@ -69,6 +76,9 @@ func Load(dotEnvPath string) (Config, error) {
 	}
 	if len(missing) > 0 {
 		return Config{}, fmt.Errorf("missing required configuration: %s", strings.Join(missing, ", "))
+	}
+	if cfg.TextHTTPCompatibilityMode != TextHTTPModeHTTP2 && cfg.TextHTTPCompatibilityMode != TextHTTPModeHTTP11 {
+		return Config{}, errors.New("TEXT_HTTP_COMPATIBILITY_MODE must be http2 or http1.1")
 	}
 	if cfg.MaxRequestBytes <= 0 || cfg.MaxImageBytes <= 0 || cfg.VisionTimeout <= 0 || cfg.VisionMaxConcurrency <= 0 || cfg.VisionCacheTTL <= 0 || cfg.VisionCacheMaxEntries <= 0 {
 		return Config{}, errors.New("numeric limits and timeouts must be positive")

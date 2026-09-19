@@ -36,11 +36,11 @@ func TestGatewayTransformsResponsesRequestAndStreamsTextResponse(t *testing.T) {
 		upstreamAuth = r.Header.Get("Authorization")
 		mu.Unlock()
 		w.Header().Set("Content-Type", "text/event-stream")
-		_, _ = io.WriteString(w, "data: first\n\n")
+		_, _ = io.WriteString(w, "event: response.created\ndata: {}\n\n")
 		if flusher, ok := w.(http.Flusher); ok {
 			flusher.Flush()
 		}
-		_, _ = io.WriteString(w, "data: [DONE]\n\n")
+		_, _ = io.WriteString(w, "event: response.completed\ndata: {}\n\n")
 	}))
 	defer textServer.Close()
 
@@ -70,7 +70,7 @@ func TestGatewayTransformsResponsesRequestAndStreamsTextResponse(t *testing.T) {
 	}
 	defer resp.Body.Close()
 	responseBody, _ := io.ReadAll(resp.Body)
-	if resp.StatusCode != http.StatusOK || !strings.Contains(string(responseBody), "[DONE]") {
+	if resp.StatusCode != http.StatusOK || !strings.Contains(string(responseBody), "response.completed") {
 		t.Fatalf("status=%d body=%s", resp.StatusCode, responseBody)
 	}
 

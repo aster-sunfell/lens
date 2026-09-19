@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -56,7 +57,7 @@ func main() {
 		DisableCompression:    true,
 	}
 	visionHTTPClient := &http.Client{Transport: transport.Clone(), Timeout: cfg.VisionTimeout}
-	textHTTPClient := &http.Client{Transport: transport.Clone()}
+	textHTTPClient := &http.Client{Transport: newTextTransport(transport, cfg.TextHTTPCompatibilityMode)}
 	visionClient := vision.NewClient(cfg, visionHTTPClient)
 	handler := gateway.New(cfg, visionClient, textHTTPClient, logger)
 
@@ -82,10 +83,24 @@ func main() {
 	logger.Info("lens listening",
 		"address", cfg.ListenAddr,
 		"text_host", cfg.TextBaseURL.Host,
+		"text_http_mode", cfg.TextHTTPCompatibilityMode,
 		"vision_host", cfg.VisionBaseURL.Host,
 	)
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		logger.Error("server stopped", "error", err)
 		os.Exit(1)
 	}
+}
+
+func newTextTransport(base *http.Transport, mode string) *http.Transport {
+	transport := base.Clone()
+	if mode == config.TextHTTPModeHTTP11 {
+		transport.ForceAttemptHTTP2 = false
+		transport.TLSNextProto = map[string]func(string, *tls.Conn) http.RoundTripper{}
+		if transport.TLSClientConfig == nil {
+			transport.TLSClientConfig = &tls.Config{}
+		}
+		transport.TLSClientConfig.NextProtos = []string{"http/1.1"}
+	}
+	return transport
 }
