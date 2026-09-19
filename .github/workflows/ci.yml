@@ -28,6 +28,19 @@ jobs:
           go-version-file: go.mod
           cache: false
       - name: Test
-        run: go test ./...
+        shell: bash
+        run: |
+          set +e
+          go test ./... 2>&1 | tee test-output.txt
+          status=${PIPESTATUS[0]}
+          set -e
+          if (( status != 0 )); then
+            output=$(tail -c 60000 test-output.txt)
+            output=${output//'%'/'%25'}
+            output=${output//$'\r'/'%0D'}
+            output=${output//$'\n'/'%0A'}
+            echo "::error title=go test failed::$output"
+          fi
+          exit "$status"
       - name: Vet
         run: go vet ./...
